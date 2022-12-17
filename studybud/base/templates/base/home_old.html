@@ -1,0 +1,14 @@
+{% extends 'main.html' %}
+
+<body>
+    
+    {% block content %}
+       {% include 'base/topics_components.html' %}
+        <h2>dynamic content</h2>
+        
+    {% include 'base/feed_components.html' %} 
+    {% include 'base/activity_components.html' %}
+    {% endblock %}
+   
+
+</body>
