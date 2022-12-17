@@ -11,67 +11,64 @@ from django.http import HttpResponse
 from django.contrib.auth.forms import UserCreationForm
 
 def home(request):
-    #q = request.GET.get('q') if request.GET.get('q') != None else ('')
-    if request.GET.get('q') != None: #IF SOMETHING ENTERS IN THE URL OF HOME PAGE AS q
-        q = request.GET.get('q')     # recieve its value into variable q else 'q' have value ''(empty string)
+
+    if request.GET.get('q') != None: 
+        q = request.GET.get('q')     
     else:
         q = ''
-    room_messages = Message.objects.filter(Q(room__topic__name__icontains=q)) #recive the filtered Message class objects
-                                                                              # if 'q' contain any letters of the topic name those messages 
-    ROOM = Room.objects.filter(                                                #those messages are retrived
-        Q(topic__name__icontains =q)|# retrive the rooms based on the values of q, if q contain any letters regarding topic name or 
-        Q(name__icontains =q)|          # room name or description
+    room_messages = Message.objects.filter(Q(room__topic__name__icontains=q))
+    ROOM = Room.objects.filter(                                               
+        Q(topic__name__icontains =q)|
+        Q(name__icontains =q)|          
         Q(description__icontains =q))
-    room_count = ROOM.count()           # find the number of rooms recived on ROOM variable
-    topic = Topic.objects.all()[0:5]    # this will recive the first 5 topic objects
+    room_count = ROOM.count()          
+    topic = Topic.objects.all()[0:5]   
     context = {'rooms':ROOM, 'room_count':room_count, 'topic':topic , 'room_messages':room_messages,}
     return render(request,"base/home.html" , context)
 
-def room(request, pk): # this is a view function for displaying the specific room when the user clickson them
-    ROOM = Room.objects.get(id=pk) # reterving the one room object based on the id of the clicked room
-    room_messages = ROOM.message_set.all().order_by('-created')# retreving the all the messages of the specific room object 
-    participants = ROOM.participants.all() # retreving all the participats of the specific room
-    if request.method == 'POST':# in the room.html we have a functionality of submiting messages with post method
-        body = request.POST.get('message') # receving the input field with the name message(this is the body of the message)
-        user =request.user  #setting the user
-        room = ROOM         # setting the user
-        Message.objects.create(user=user, body=body, room=room) # creating the user using create mehtod 
-        ROOM.participants.add(request.user) # adding a participants to the specific room 
-        return redirect('room', pk=ROOM.id) # after submitting the message returning to the same page
+def room(request, pk): 
+    ROOM = Room.objects.get(id=pk) 
+    room_messages = ROOM.message_set.all().order_by('-created')
+    participants = ROOM.participants.all() 
+    if request.method == 'POST':
+        body = request.POST.get('message') 
+        user =request.user 
+        room = ROOM        
+        Message.objects.create(user=user, body=body, room=room)
+        ROOM.participants.add(request.user)  
+        return redirect('room', pk=ROOM.id)
     context = {'room': ROOM , 'room_messages':room_messages, 'participants':participants}
-    return render(request, "base/room.html", context) # rendering the room.html page and adding context to the specific page
+    return render(request, "base/room.html", context) 
 
-def userProfile(request,pk): # this is the function that displays the user profile page 
-    user = User.objects.get(id=pk) # selecting the specific user object
-    rooms = user.room_set.all() # selecting the rooms that are created by the specified user 
-    room_message = user.message_set.all() # selecting all the messages that are created by the specific user 
-    topics = Topic.objects.all() # selecting all the avilabel topic (ont only the ones that are created by the specific user)
-    room = Room.objects.all() # selecting all the rooms (not ony the ones that are created by the specific user ) this is only to count the room number
-    room_count = room.count() # counding all the rooms thare avilible on the entire website
+def userProfile(request,pk):
+    user = User.objects.get(id=pk) 
+    rooms = user.room_set.all()
+    room_message = user.message_set.all()  
+    topics = Topic.objects.all()
+    room = Room.objects.all() 
+    room_count = room.count() 
     context = {'user':user,'rooms':rooms,'topic':topics,'room_messages':room_message,'room_count':room_count,}
     return render(request,'base/user_profile.html',context)
 
-def deleteMessage(request, pk): # this is a function for deleting the messages that are created by a specific user (the owner of the message)
-    message = Message.objects.get(id=pk) # getting the specific message 
-    if request.user != message.user: # checking wether the requested user is the owner of the message or not (if not)
-        return HttpResponse('you are not allowed here') # sending them a message
-    if request.method == 'POST': # if the method is a post (a post method in this function is submitted by only usser)
+def deleteMessage(request, pk):
+    message = Message.objects.get(id=pk) 
+    if request.user != message.user: 
+        return HttpResponse('you are not allowed here')
+    if request.method == 'POST':
         message.delete()
-        return redirect('home') # delete the message and go back to the home page 
+        return redirect('home')
     return render(request,'base/delete.html', {"obj":message})
 
-@login_required(login_url = 'login') # checking wether the user is logged in or not if not sending him to the login page
-def createRoom(request): # this is the function for creating a home page 
-    form = RoomForm() # creating a form object by using the imported class RoomForm
-    topics = Topic.objects.all() # retreving all the topic to add the avilable topics to the dropdown list of the specified html page
-    if request.method == 'POST': # if the request from the webpage is a POST method 
-        topic_name = request.POST.get('topic') # receving the topic from the input field named topic
-        topic, created = Topic.objects.get_or_create(name= topic_name) # checking is there any topic in the Topic objects with the name of 
-                                                                    # the recieved topic if yes retreving that topic object if no create a
-                                                                    # Topic object with that name and return it 
+@login_required(login_url = 'login') 
+def createRoom(request): 
+    form = RoomForm() 
+    topics = Topic.objects.all()
+    if request.method == 'POST': 
+        topic_name = request.POST.get('topic') 
+        topic, created = Topic.objects.get_or_create(name= topic_name) 
         Room.objects.create(
             host = request.user,
-            topic = topic,                                  # creating the room with the specified  vlaues
+            topic = topic,                                  
             name = request.POST.get('name'),
             description = request.POST.get('description')
         )
